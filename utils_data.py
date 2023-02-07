@@ -1,4 +1,4 @@
-# system modules
+#System modules
 import re
 import json
 import time
@@ -12,12 +12,9 @@ from PIL import Image, ImageDraw
 from sklearn.model_selection import train_test_split
 import scipy.io as sio
 
-
-blacklist = [1, 88, 96]
-blacklist.extend([18, 79, 92])
-ids = [i for i in range(1, 97) if i not in blacklist]
-
-
+#blacklist = [1, 88, 96]
+#blacklist.extend([18, 79, 92])
+ids = [i for i in range(1, 97)] #if i not in blacklist  
 # apply salt-pepper to image
 # https://medium.com/ymedialabs-innovation/data-augmentation-techniques-in-cnn-using-tensorflow-371ae43d5be9#a7b0
 def add_salt_pepper(X_img):
@@ -28,7 +25,7 @@ def add_salt_pepper(X_img):
     amount = 0.01
     num_salt = np.ceil(amount * X_img_copy.size * salt_vs_pepper)
     num_pepper = np.ceil(amount * X_img_copy.size * (1.0 - salt_vs_pepper))
-    
+
     # Add Salt noise
     coords = [np.random.randint(0, i - 1, int(num_salt)) for i in X_img_copy.shape]
     X_img_copy[coords[0], coords[1]] = 255
@@ -57,30 +54,34 @@ def load_anthropometrics(data_path):
     df = pd.concat([df_l, df_r])
     df.index.names = ['id', 'ear']
     # add targets (left notch freq)
-    target_path_l = osp.join(osp.dirname(data_path), 'n1_l.txt')
-    trgt_l = pd.read_csv(target_path_l, header=None, names=['n1'])
-    trgt_l.index = pd.MultiIndex.from_tuples([(i+1, 'left') for i in trgt_l.index])
-    trgt_l.index.names = ['id', 'ear']
+    #target_path_l = osp.join(osp.dirname(data_path), 'n1_l.txt')
+    #trgt_l = pd.read_csv(target_path_l, header=None, names=['n1'])
+   # trgt_l.index = pd.MultiIndex.from_tuples([(i+1, 'left') for i in trgt_l.index])
+   # trgt_l.index.names = ['id', 'ear']
     # add targets (right notch freq)     
-    target_path_r = osp.join(osp.dirname(data_path), 'n1_r.txt')
-    trgt_r = pd.read_csv(target_path_r, header=None, names=['n1'])
-    trgt_r.index = pd.MultiIndex.from_tuples([(i+1, 'right') for i in trgt_r.index])
-    trgt_r.index.names = ['id', 'ear']
-    df['n1'] = pd.concat([trgt_l, trgt_r])['n1']
+   # target_path_r = osp.join(osp.dirname(data_path), 'n1_r.txt')
+   # trgt_r = pd.read_csv(target_path_r, header=None, names=['n1'])
+   # trgt_r.index = pd.MultiIndex.from_tuples([(i+1, 'right') for i in trgt_r.index])
+   # trgt_r.index.names = ['id', 'ear']
+   # df['n1'] = pd.concat([trgt_l, trgt_r])['n1']
     return df
 
 
 ## load elevation-azimuth pictures from the HUTUBS dataset, for each freq
 def load_hutubs_hrtf(dataset_path, anthropometrics_path, data_content='hrtfs', user_filters={}):
     # load params
-    configs = sio.loadmat(osp.join(dataset_path, 'configs.mat'))
-    freqs = configs['f'][0]
-    dshape = (len(configs['elevations'][0]), len(configs['azimuths'][0]))
+    #configs.mat instead of (azimuth.mat and elevation.mat)
+    #configs = sio.loadmat(osp.join(dataset_path, 'azimuth.mat','elevation.mat'))
+    azimuths   = sio.loadmat('./azimuth.mat')['azimuth'][0]
+    elevations = sio.loadmat('./elevation.mat')['elevation'][0]
+    freqs     = sio.loadmat('./freq_matlab.mat')['X'][0] #freqs.mat [freq][0]
+    #freqs = configs['f'][0]
+    dshape = (len(elevations), len(azimuths))      #(len(configs['elevation'][0]), len(configs['azimuth'][0]))
     # assemble filters
     filters = {
         'ids': ids,
         'ears': ['left', 'right'],
-        'freqs': freqs,
+        'freq': freqs,
         **user_filters
     }    
     # load anthropometrics
@@ -92,15 +93,15 @@ def load_hutubs_hrtf(dataset_path, anthropometrics_path, data_content='hrtfs', u
     ids_train, ids_test = train_test_split(filters['ids'])
     print(f'Train/test split: {len(ids_train)}/{len(ids_test)} ids')
     # calculate useful parameters
-    n_variations = len(filters['ears']) * len(filters['freqs'])
+    n_variations = len(filters['ears']) * len(filters['freq'])
     n_train = n_variations * len(ids_train)
-    n_test = n_variations * len(ids_test)
-    y_cols = ['id', 'ear', 'freq'] + list(df.columns)
+    n_test  = n_variations * len(ids_test)
+    y_cols  = ['id', 'ear', 'freq'] + list(df.columns)
     # init placeholders
     x_train = np.zeros((n_train, *dshape))
     y_train = pd.DataFrame(columns=y_cols, index=np.arange(n_train))
-    x_test = np.zeros((n_test, *dshape))
-    y_test = pd.DataFrame(columns=y_cols, index=np.arange(n_test))
+    x_test  = np.zeros((n_test, *dshape))
+    y_test  = pd.DataFrame(columns=y_cols, index=np.arange(n_test))
     # loop through filters
     i_train=0
     i_test=0
@@ -111,54 +112,88 @@ def load_hutubs_hrtf(dataset_path, anthropometrics_path, data_content='hrtfs', u
     for sid in filters['ids']:
         for ear in filters['ears']:
             # generate path
-            filename = 'subj_{}_ear_{}.mat'.format(
-                sid, 
-                {'left': 1, 'right': 2}[ear])
-            p = osp.join(dataset_path, filename)   
+            #filename = 'subj_{}_ear_{}.mat'.format(
+             #   sid, 
+               # {'left': 1, 'right': 2}[ear])
+           # p = osp.join(dataset_path, filename)
+            ##------------------------------------
+             #from <'matlab-fin.mat'> import *
+                
+                
+                
+            #mat_fname = pjoin('/Users/ibraheemalameedi/desktop/Studienarbeit_test', 'matlab-fin.mat')
+            #mat_contents = sio.loadmat(mat_fname)
+             
+            q = sio.loadmat('/Users/ibraheemalameedi/desktop/Studienarbeit_test/matlab-fin.mat')
+            e = q['Mat'][sid - 1 ,:]
+            content = e[data_content]
+
+            #e[ear] = q[sid,:]
+            #q = sio.loadmat(mat_fname)
+            # e[ear] = q[sid,:]
+             #import q as p
+             #s = q.Mat
+
+             #open('matlab-fin.mat') as p:
+             #t = p.read()
+             #s = t.Mat
+             #s = p.Mat
+             #e[ear] = s[sid,:]
+
+             #p = sio.loadmat('matlab-fin.mat')
+             #e[ear] = p.Mat[sid,:]
+             #e[ear] = sofa.access.p(Mat)
+
+
             # load data
-            mat = sio.loadmat(p)
-            content = mat[data_content]
-            for i, f in enumerate(freqs):
+            # mat = sio.loadmat(p)
+            #content = mat[data_content]
+    for i, f in enumerate(freqs):
                 # filter by freq
-                if f not in filters['freqs']:
-                    continue
+        if f not in filters['freq']:
+            continue
                 # collect target data
-                adata = df.loc[(sid, ear)]
-                if float(f) != float(f):
-                    print(f)
-                tdata = {
-                    'id': sid,
-                    'ear': ear,
-                    'freq': float(f),
-                    **adata
-                }
+                #adata = df.loc[(sid, ear)]
+        if float(f) != float(f):
+            print(f)
+            tdata = {
+            'id': sid,
+            'ear': ear,
+            'freq': float(f),
+            **adata
+        }
                 # store data
-                data = content[i].T if ear=='left' else content[i].T[:,::-1]
-                if sid in ids_train:
-                    x_train[i_train] = data
-                    y_train.loc[i_train] = tdata
-                    i_train += 1
-                    pbar.update(1)
-                elif sid in ids_test:
-                    x_test[i_test] = data
-                    y_test.loc[i_test] = tdata
-                    i_test += 1
-                    pbar.update(1)
-    pbar.close()
+            data = content[i].T if ear=='left' else content[i].T[:,::-1]
+                #if sid in ids_train:
+    if sid in ids_train:
+        x_train[i_train] = data
+        y_train.loc[i_train] = tdata
+        i_train += 1
+        pbar.update(1)
+    elif sid in ids_test:
+        x_test[i_test] = data
+        y_test.loc[i_test] = tdata
+        i_test += 1
+        pbar.update(1)
+        pbar.close()
     return (x_train, y_train), (x_test, y_test)
 
 
 ## load elevation-frequency pictures from the HUTUBS dataset
 def load_hutubs_hrtf_alt(dataset_path, anthropometrics_path, data_content='hrtfs', user_filters={}):
     # load params
-    configs = sio.loadmat(osp.join(dataset_path, 'configs.mat'))
-    azimuths = configs['azimuths'][0]
-    dshape = (len(configs['elevations'][0]), len(configs['f'][0]))
+    #configs = sio.loadmat(osp.join(dataset_path,'azimuth.mat','elevation.mat'))
+    azimuths = sio.loadmat('./azimuth.mat')['azimuth'][0]
+    elevations = sio.loadmat('./elevation.mat')['elevation'][0]
+    freqs = sio.loadmat('./freq_matlab.mat')['X'][0]
+    #azimuths = configs['azimuth'][0]
+    dshape =  (len(elevations), len(freqs)) ###len(freq)['freq_matlab.mat'][0]                          #len(configs['freq'][0])     #(len(configs['elevation.mat'][0]), len(freqs['freq'][0]))
+
     # assemble filters
     filters = {
         'ids': ids,
         'ears': ['left', 'right'],
-        'azimuths': azimuths,
+        'azimuth': azimuths,
         **user_filters
     }    
     # load anthropometrics
@@ -170,7 +205,7 @@ def load_hutubs_hrtf_alt(dataset_path, anthropometrics_path, data_content='hrtfs
     ids_train, ids_test = train_test_split(filters['ids'])
     print(f'Train/test split: {len(ids_train)}/{len(ids_test)} ids')
     # calculate useful parameters
-    n_variations = len(filters['ears']) * len(filters['azimuths'])
+    n_variations = len(filters['ears']) * len(filters['azimuth'])
     n_train = n_variations * len(ids_train)
     n_test = n_variations * len(ids_test)
     y_cols = ['id', 'ear', 'azimuth'] + list(df.columns)
@@ -189,16 +224,38 @@ def load_hutubs_hrtf_alt(dataset_path, anthropometrics_path, data_content='hrtfs
     for sid in filters['ids']:
         for ear in filters['ears']:
             # generate path
-            filename = 'subj_{}_ear_{}.mat'.format(
-                sid, 
-                {'left': 1, 'right': 2}[ear])
-            p = osp.join(dataset_path, filename)   
+            #filename = 'subj_{}_ear_{}.mat'.format(
+             #filename = 'matlab-fin.mat'.format(
+              #  sid, 
+               # {'left': 1, 'right': 2}[ear])
+
+            q = sio.loadmat('/Users/ibraheemalameedi/desktop/Studienarbeit_test/matlab-fin.mat')
+            e = q['Mat'][sid - 1 ,:]
+
+            #q = sio.loadmat('matlab-fin.mat')
+            #import q as p
+            #s = p.Mat
+            #e[ear] = s[sid,:]
+
+            #open('matlab-fin.mat') as p:
+            #t = p.read()
+            #s = t.Mat
+            #e[ear] = s[sid,:]
+
+
+            #p = osp.join(dataset_path, filename)   
+            #p = sio.loadmat('matlab-fin.mat')
+            #e[ear] = p.Mat[sid,:]
+            #e[ear] = num2cell(p.Mat(sid,:))
+            #e[ear] = sofa.access.p(Mat)
+            content = e[data_content]
+
             # load data
-            mat = sio.loadmat(p)
-            content = mat[data_content]
-            for i, az in enumerate(azimuths):
+            #mat = sio.loadmat(p)
+            #content = mat[data_content]
+            for i, az in enumerate(azimuth):
                 # filter by freq
-                if az not in filters['azimuths']:
+                if az not in filters['azimuth']:
                     continue
                 # collect target data
                 adata = df.loc[(sid, ear)]
@@ -227,29 +284,38 @@ def load_hutubs_hrtf_alt(dataset_path, anthropometrics_path, data_content='hrtfs
 ## load "HRTF patches" from the HUTUBS dataset, as per `yamamoto_fully_2017`
 def load_hutubs_yamo(dataset_path, anthropometrics_path, data_content='hrtfs', user_filters={}):
     # load params
-    configs = sio.loadmat(osp.join(dataset_path, 'configs.mat'))
-    azimuths = configs['azimuths'][0]
-    elevations = configs['elevations'][0]
-    dshape = (5, 5, len(configs['f'][0]))
+    ####configs = sio.loadmat(osp.join(dataset_path, 'azimuth.mat','elevation.mat')) #configs.mat
+    #azimuths = configs['azimuth'][0]
+    #elevations = configs['elevation'][0]
+    #dshape = (5, 5, len(configs['freq'][0]))
+    azimuths   = sio.loadmat('./azimuth.mat')['azimuth'][0]
+    elevations = sio.loadmat('./elevation.mat')['elevation'][0]
+    frequency  = sio.loadmat('./freq_matlab.mat')['X'][0]
+    dshape     = (5, 5, len(frequency)) # freqs('freq')
     # assemble filters
     filters = {
         'ids': ids,
         'ears': ['left', 'right'],
-        'azimuths': azimuths,
-        'elevations': elevations,
-        **user_filters
+        'azimuth': azimuths,
+        'elevation': elevations,
+        **user_filters   # the ** operator to unpack the contents of the user_filters dictionary and merge them into the filters dictionary. This allows any additional filter criteria specified by the user to be included in the filters dictionary, effectively customizing the filter criteria for the data.
     }    
+    print(filters)
     # load anthropometrics
-    df = load_anthropometrics(anthropometrics_path)
+    #anthropometrics_path=('./AntrhopometricMeasures.csv')
+    df = load_anthropometrics(anthropometrics_path)  # stores anthropometrics data
     df = df.reindex(pd.MultiIndex.from_product(
         [ids, df.index.levels[1]], 
         names=df.index.names))
+
     # split train-test subjects
     ids_train, ids_test = train_test_split(filters['ids'], random_state=1337)
     print(f'Train/test split: {len(ids_train)}/{len(ids_test)} ids')
     # calculate useful parameters
-    n_variations = len(filters['ears']) * len(filters['azimuths']) * len(filters['elevations'])
-    print(n_variations)
+    n_variations = len(filters['ears']) * len(filters['azimuth']) * len(filters['elevation'])
+    # print(len(filters['azimuth']))
+    # print(len(filters['elevation']))
+    # print(n_variations)
     n_train = n_variations * len(ids_train)
     n_test = n_variations * len(ids_test)
     y_cols = ['id', 'ear', 'ear_n', 'azimuth', 'elevation'] + list(df.columns)
@@ -271,48 +337,82 @@ def load_hutubs_yamo(dataset_path, anthropometrics_path, data_content='hrtfs', u
             filename = 'subj_{}_ear_{}.mat'.format(
                 sid, 
                 {'left': 1, 'right': 2}[ear])
-            p = osp.join(dataset_path, filename)   
+            p = osp.join(dataset_path, filename)   # generate full file path
             # load data
             mat = sio.loadmat(p)[data_content]
+            # mat = sio.loadmat(p)
+            
+            print(mat)
+            #filename = 'matlab-fin.mat'.format(
+              #  sid, 
+               # {'left': 1, 'right': 2}[ear])
+            # q = sio.loadmat('matlab-fin.mat')
+            # e = q['Mat'][sid - 1 ,:]
+
+            #q = sio.loadmat('matlab-fin.mat')
+            #import q as p
+            #s = p.Mat
+            #e[ear] = s[sid,:]
+
+            #open('matlab-fin.mat') as p:
+            #t = p.read()
+            #s = t.Mat
+            #e[ear] = s[sid,:]
+            #p = sio.loadmat('matlab-fin.mat')
+
+            #e[ear] = num2cell(p.Mat(sid,:))
+            #e[ear] = sofa.access.p(Mat)
+            # load data
+           # mat = sio.loadmat(e)[data_content]
+
+            #mat = sio.loadmat(p)[data_content]
+
             # for each azimuth and elevation..
             xxx = 0
-            for i_az, az in enumerate(azimuths):
-                if az not in filters['azimuths']:
+        for i_az, az in enumerate(azimuths):
+            if az not in filters['azimuth']:
+                continue # skip the current iteration of the loop and the control flow of the program goes to the next iteration
+            for i_el, el in enumerate(elevations):
+                if el not in filters['elevation']:
                     continue
-                for i_el, el in enumerate(elevations):
-                    if el not in filters['elevations']:
-                        continue
-                    if i_el < 2 or i_el > len(elevations)-3:
-                        continue
-                    xxx += 1
-                    #print(xxx)
-                    # collect target data
-                    adata = df.loc[(sid, ear)]
-                    tdata = {
-                        'id': sid,
-                        'ear': ear,
-                        'ear_n': {'left': 1, 'right': 2}[ear],
-                        'azimuth': float(az),
-                        'elevation': float(el),
-                        **adata
-                    }
-                    # extract data
-                    az_ind = range(i_az-2, i_az+3)
-                    el_ind = range(i_el-2, i_el+3)
-                    data = mat.take(az_ind, axis=1, mode='wrap')
-                    data = data.take(el_ind, axis=2, mode='wrap')
-                    data = np.moveaxis(data, 0, -1)
-                    # store data
-                    if sid in ids_train:
-                        x_train[i_train] = data
-                        y_train.loc[i_train] = tdata
-                        i_train += 1
-                        pbar.update(1)
-                    elif sid in ids_test:
-                        x_test[i_test] = data
-                        y_test.loc[i_test] = tdata
-                        i_test += 1
-                        pbar.update(1)
+                if i_el < 2 or i_el > len(elevations)-3:
+                    continue
+                xxx += 1
+                print(xxx)
+                # collect target data
+                adata = df.loc[(sid, ear)]  # access anthropometric data
+                tdata = {
+                    'id': sid,
+                    'ear': ear,
+                    'ear_n': {'left': 1, 'right': 2}[ear],
+                    'azimuth': float(az),
+                    'elevation': float(el),
+                    **adata
+                }   # store current sid, ear, azimuth and elevation in tdata
+                # extract data
+                az_ind = range(i_az-2, i_az+3) # returns a sequence of numbers (i_az+3 not included)
+                el_ind = range(i_el-2, i_el+3)
+                data = mat.take(az_ind, axis=1, mode='wrap') # extract elements along the specified axis. The az_ind variable is a list of indices, and axis=1 specifies that elements should be extracted along the second dimension (i.e., columns) of the mat array. The mode='wrap' argument specifies that when an index is greater than the size of the specified axis, the indices "wrap around" to the start of the axis. The resulting extracted elements are assigned to the data variable. # np.take(arr, indices, axis=3) is equivalent to arr[:,:,:,indices,...]
+                data = data.take(el_ind, axis=2, mode='wrap')
+                data = np.moveaxis(data, 0, -1)  # the code is manipulating a 3D NumPy array mat by indexing it along two different axes, axis=1 and axis=2.
+                # the np.moveaxis method is being used to move the first axis of the resulting array to the last position, so that the shape of the array is changed from (..., X, Y, Z) to (..., Y, Z, X).
+                # From the last three lines of code we can infer about the structure of 'mat': it is a 3-D array of structure LxMxN,
+                # where L = length of IR,
+                #       M = number of azimuths,
+                #       N = number of elevations
+                # the final dimension of data: 5x5xL
+
+                # store data
+                if sid in ids_train:
+                    x_train[i_train] = data
+                    y_train.loc[i_train] = tdata
+                    i_train += 1
+                    pbar.update(1)
+                elif sid in ids_test:
+                    x_test[i_test] = data
+                    y_test.loc[i_test] = tdata
+                    i_test += 1
+                    pbar.update(1)
     pbar.close()
     return (x_train[:i_train], y_train.iloc[:i_train]), (x_test[:i_test], y_test.iloc[:i_test])
 
@@ -320,15 +420,17 @@ def load_hutubs_yamo(dataset_path, anthropometrics_path, data_content='hrtfs', u
 ## load HRTFs from the HUTUBS dataset, 1 hrtf per datapoint, 1 set
 def load_hutubs_1(dataset_path, anthropometrics_path, data_content='hrtfs', user_filters={}):
     # load params
-    configs = sio.loadmat(osp.join(dataset_path, 'configs.mat'))
-    azimuths = configs['azimuths'][0]
-    elevations = configs['elevations'][0]
+    #configs = sio.loadmat(osp.join(dataset_path,'azimuth.mat','elevation.mat')) #configs.mat
+    #azimuths = configs['azimuth'][0]
+    #elevations = configs['elevation'][0]
+    azimuths = sio.loadmat('./azimuth.mat')['azimuth'][0]
+    elevations = sio.loadmat('./elevation.mat')['elevation'][0]
     # assemble filters
     filters = {
         'ids': ids,
         'ears': ['left', 'right'],
-        'azimuths': azimuths,
-        'elevations': elevations,
+        'azimuth': azimuth,
+        'elevation': elevation,
         **user_filters
     }    
     # load anthropometrics
@@ -337,33 +439,55 @@ def load_hutubs_1(dataset_path, anthropometrics_path, data_content='hrtfs', user
         [ids, df.index.levels[1]], 
         names=df.index.names))
     # calculate useful parameters
-    n_variations = len(filters['ears']) * len(filters['azimuths']) * len(filters['elevations'])
+    n_variations = len(filters['ears']) * len(filters['azimuth']) * len(filters['elevation'])
     n = n_variations * len(filters['ids'])
     y_cols = ['id', 'ear', 'ear_n', 'azimuth', 'elevation'] + list(df.columns)
     # init placeholders
-    X = np.zeros((n, len(configs['f'][0])))
+    X = np.zeros((n, len(freqs['f'][0]))) #--------> configs
     y = pd.DataFrame(columns=y_cols, index=np.arange(n))
     # loop through filters
     i=0
     if hasattr(tqdm, '_instances'):
         tqdm._instances.clear()
-    pbar = tqdm(total=n)
+        pbar = tqdm(total=n)
     # for each subject and ear...
     for sid in filters['ids']:
         for ear in filters['ears']:
             # generate path
-            filename = 'subj_{}_ear_{}.mat'.format(
-                sid, 
-                {'left': 1, 'right': 2}[ear])
-            p = osp.join(dataset_path, filename)   
+            # filename = 'subj_{}_ear_{}.mat'.format(
+            # filename = 'matlab-fin.mat'.format(
+            #   sid, 
+            #  {'left': 1, 'right': 2}[ear])
+            #p = osp.join(dataset_path, filename) 
+
+            q = sio.loadmat('/Users/ibraheemalameedi/desktop/Studienarbeit_test/matlab-fin.mat')
+            e = q['Mat'][sid - 1]
+
+            #q = sio.loadmat('matlab-fin.mat')
+            #import q as p
+            #s = p.Mat
+            #e[ear] = s[sid,:]
+
+            #open('matlab-fin.mat') as p:
+            #t = p.read()
+            #s = t.Mat
+            #e[ear] = s[sid,:]
+
+            #p = sio.loadmat('matlab-fin.mat')
+            #e[ear] = p.Mat[sid,:]
+            #e[ear] = num2cell(p.Mat(sid,:))
+
+            content = e[data_content]
+
             # load data
-            mat = sio.loadmat(p)[data_content]
+            mat = sio.loadmat(e)[data_content]
+            #mat = sio.loadmat(p)[data_content]
             # for each azimuth and elevation..
-            for i_az, az in enumerate(azimuths):
-                if az not in filters['azimuths']:
+            for i_az, az in enumerate(azimuth):
+                if az not in filters['azimuth']:
                     continue
-                for i_el, el in enumerate(elevations):
-                    if el not in filters['elevations']:
+                for i_el, el in enumerate(elevation):
+                    if el not in filters['elevation']:
                         continue
                     # collect target data
                     adata = df.loc[(sid, ear)]
@@ -390,19 +514,23 @@ def load_hutubs_1(dataset_path, anthropometrics_path, data_content='hrtfs', user
 ## load HRTFs, anthropometrics, and ear pictures from the HUTUBS dataset, 1 hrtf per datapoint, 1 set, as dataframe
 def load_hutubs_1_ears(user_filters={}):
     # paths
-    images_path = './data/hutubs_img3/'
-    hrtfs_path = './data/hutubs_hrtf/'
-    anthropometrics_path = './data/hutubs_measures.csv'
+    # images_path = './data/hutubs_img3/'
+    #hrtfs_path = './data/hutubs_hrtf/'  #----------------->>>
+    hrtfs_path = './Studienarbeit_test/'
+    anthropometrics_path = './AntrhopometricMeasures.csv'  #------>>> csv file changed
     # load params
-    configs = sio.loadmat(osp.join(hrtfs_path, 'configs.mat'))
-    azimuths = configs['azimuths'][0]
-    elevations = configs['elevations'][0]
+    #configs   = sio.loadmat(osp.join(hrtfs_path, 'azimuth.mat','elevation.mat'))  #------->> configs.mat
+    #azimuth   = configs['azimuth'][0]
+    #elevation = configs['elevation'][0]
+    azimuths = sio.loadmat('./azimuth.mat')['azimuth'][0]
+    elevations = sio.loadmat('./elevation.mat')['elevation'][0]
+    #freqs = sio.loadmat('./freq_matlab.mat')['X'][0]
     # assemble filters
     filters = {
         'ids': ids,
         'ears': ['left', 'right'],
-        'azimuths': azimuths,
-        'elevations': elevations,
+        'azimuth': azimuths,
+        'elevation': elevations,
         **user_filters
     }
     # load anthropometrics
@@ -411,7 +539,7 @@ def load_hutubs_1_ears(user_filters={}):
         [ids, df_anthro.index.levels[1]], 
         names=df_anthro.index.names))
     # calculate useful parameters
-    n_variations = len(filters['ears']) * len(filters['azimuths']) * len(filters['elevations'])
+    n_variations = len(filters['ears']) * len(filters['azimuth']) * len(filters['elevation'])
     n = n_variations * len(filters['ids'])
     cols = ['id', 'ear', 'ear_n', 'azimuth', 'elevation'] + list(df_anthro.columns) + ['depthmap', 'hrtf']
     # init placeholders
@@ -426,20 +554,44 @@ def load_hutubs_1_ears(user_filters={}):
     for sid in filters['ids']:
         for ear in filters['ears']:
             # generate hrtf path, load data
-            hrtf_filename = 'subj_{}_ear_{}.mat'.format(
-                sid, 
-                {'left': 1, 'right': 2}[ear])
-            mat = sio.loadmat(osp.join(hrtfs_path, hrtf_filename))['hrtfs']
+            #hrtf_filename = 'subj_{}_ear_{}.mat'.format(
+           # hrtf_filename = 'matlab-fin.mat'.format(
+            #    sid, 
+            #   {'left': 1, 'right': 2}[ear])
+            # mat = sio.loadmat(osp.join(hrtfs_path, hrtf_filename))['hrtfs']
+
+
+            q = sio.loadmat('/Users/ibraheemalameedi/desktop/Studienarbeit_test/matlab-fin.mat')
+            e = q['Mat'][sid - 1 ,:]
+
+            #q = sio.loadmat('matlab-fin.mat')
+            #import q as p
+            #s = p.Mat
+            #e[ear] = s[sid,:]
+
+
+
+            #open('matlab-fin.mat') as p:
+            #t = p.read()
+            #s = t.Mat
+            #e[ear] = s[sid,:]
+
+            #p = sio.loadmat('matlab-fin.mat')
+            #e[ear] = p.Mat[sid,:]
+            #e[ear] = num2cell(p.Mat(sid,:))
+
+            content = e[data_content]
+
             # generate depthmap path, load data
             depth_filename = f'pp{sid}_3DheadMesh.png'
             depth_filepath = osp.join(images_path, ear, '0_0_0_0', depth_filename)
             data_depth = np.asarray(Image.open(depth_filepath))
             # for each azimuth and elevation..
-            for i_az, az in enumerate(azimuths):
-                if az not in filters['azimuths']:
+            for i_az, az in enumerate(azimuth):
+                if az not in filters['azimuth']:
                     continue
-                for i_el, el in enumerate(elevations):
-                    if el not in filters['elevations']:
+                for i_el, el in enumerate(elevation):
+                    if el not in filters['elevation']:
                         continue
                     # collect target data
                     data_anthro = df_anthro.loc[(sid, ear)]
@@ -468,8 +620,11 @@ def load_hutubs_1_ears(user_filters={}):
 ## load depthmap pictures from the HUTUBS dataset
 def load_hutubs_3d(dataset_path, anthropometrics_path, data_content='hrtfs', user_filters={}):
     # load params
-    configs = sio.loadmat(osp.join(dataset_path, 'configs.mat'))
-    dshape = sio.loadmat(osp.join(dataset_path, 'subj_1_ear_1.mat'))['hrtfs'].shape
+    #configs = sio.loadmat(osp.join(dataset_path, 'azimuth.mat','elevation.mat'))
+    azimuths = sio.loadmat('./azimuth.mat')['azimuth'][0]
+    elevations = sio.loadmat('./elevation.mat')['elevation'][0]
+    freqs = sio.loadmat('./freq_matlab.mat')['X'][0]
+    #dshape  = sio.loadmat(osp.join(dataset_path, 'subj_1_ear_1.mat'))['hrtfs'].shape  #----->> ??
     # assemble filters
     filters = {
         'ids': ids,
@@ -503,20 +658,41 @@ def load_hutubs_3d(dataset_path, anthropometrics_path, data_content='hrtfs', use
     for sid in filters['ids']:
         for ear in filters['ears']:
             # generate path
-            filename = 'subj_{}_ear_{}.mat'.format(
-                sid, 
-                {'left': 1, 'right': 2}[ear])
-            p = osp.join(dataset_path, filename)   
+            #filename = 'subj_{}_ear_{}.mat'.format(
+            #filename = 'matlab-fin.mat'.format(
+              #  sid, 
+               # {'left': 1, 'right': 2}[ear])
+            # p = osp.join(dataset_path, filename)   
+            #p = sio.loadmat('matlab-fin.mat')
+            #e[ear] = p.Mat[sid,:]
+
+
+            q = sio.loadmat('/Users/ibraheemalameedi/desktop/Studienarbeit_test/matlab-fin.mat')
+            e = q['Mat'][sid - 1 ,:]
+
+            #q = sio.loadmat('matlab-fin.mat')
+            #import q as p
+            #s = p.Mat
+            #e[ear] = s[sid,:]
+
+
+            #open('matlab-fin.mat') as p:
+            #t = p.read()
+            #s = t.Mat
+            #e[ear] = s[sid,:]
+
+            content = e[data_content]
+
             # load data, anthro, and target
-            mat = sio.loadmat(p)
-            content = mat[data_content]
+           # mat = sio.loadmat(p)
+            #content = mat[data_content]
             adata = df.loc[(sid, ear)]
             tdata = {
                 'id': sid,
-                'ear': ear,
-                'ear_n': {'left': 1, 'right': 2}[ear],
-                **adata
-            }
+               'ear': ear,
+               'ear_n': {'left': 1, 'right': 2}[ear],
+               **adata
+           }
             # store data
             data = content if ear=='left' else content[:,::-1]
             if sid in ids_train:
@@ -551,8 +727,8 @@ def load_hutubs_depth(dataset_path, anthropometrics_path, user_filters={}, saltp
     filters = {
         'ids': subjects,
         'ears': ['left', 'right'],
-        'azimuths': cfg['azimuths'],
-        'elevations': cfg['elevations'],
+        'azimuth': cfg['azimuth'],
+        'elevation': cfg['elevation'],
         'xoffs': cfg['xoffs'],
         'yoffs': cfg['yoffs'],
         **user_filters
@@ -563,7 +739,7 @@ def load_hutubs_depth(dataset_path, anthropometrics_path, user_filters={}, saltp
     ids_train, ids_test = train_test_split(filters['ids'])
     print(f'Train/test split: {len(ids_train)}/{len(ids_test)} ids')
     # calculate useful parameters
-    n_variations = len(filters['ears']) * len(filters['elevations']) * len(filters['azimuths']) * len(filters['xoffs']) * len(filters['yoffs'])   
+    n_variations = len(filters['ears']) * len(filters['elevation']) * len(filters['azimuth']) * len(filters['xoffs']) * len(filters['yoffs'])   
     n_train = n_variations * len(ids_train) * (saltpepper if saltpepper else 1)
     n_test = n_variations * len(ids_test)
     w = cfg['size']
@@ -580,8 +756,8 @@ def load_hutubs_depth(dataset_path, anthropometrics_path, user_filters={}, saltp
     pbar = tqdm(total=n_train+n_test)
     for sid in filters['ids']:
         for ear in filters['ears']:
-            for elevation in filters['elevations']:
-                for azimuth in filters['azimuths']:
+            for elevation in filters['elevation']:
+                for azimuth in filters['azimuth']:
                     for x in filters['xoffs']:
                         for y in filters['yoffs']:
                             # generate path
@@ -715,13 +891,13 @@ def load_data(dir_path, img_size=None, filters={}, target='name', rem_corners=Fa
         'yoffs': None,
         **filters
     }
-    
+
     # list img files
     img_glob = osp.join(dir_path, '**', '*.png')
     img_paths = glob(img_glob, recursive=True)
     img_paths.sort()
     print(f'Found {len(img_paths)} images.')
-    
+
     # filter and split data
     subjects = list(set([osp.splitext(osp.basename(p))[0] for p in img_paths]))
     subjects_kept = all_filters['name'] if all_filters['name'] is not None else [int(re.search('pp(.*)_', n).group(1)) for n in subjects]
@@ -733,7 +909,7 @@ def load_data(dir_path, img_size=None, filters={}, target='name', rem_corners=Fa
     s = np.asarray(Image.open(img_paths[0])).shape
     offs = (0, 0) if img_size is None else ((s[0]-img_size[0])//2, (s[1]-img_size[1])//2)
     size = s if img_size is None else img_size
-    
+
     # init placeholders
     n_elevations = 11 if all_filters['elevation'] is None else len(all_filters['elevation'])
     n_azimuths   = 11 if all_filters['azimuth'] is None else len(all_filters['azimuth'])
@@ -759,7 +935,7 @@ def load_data(dir_path, img_size=None, filters={}, target='name', rem_corners=Fa
     mask = Image.new("L", size, 0)
     draw = ImageDraw.Draw(mask)
     draw.ellipse((0, 0, *size), fill=255)
-        
+
     # load and add to matrix
     for p in tqdm(img_paths):
         coord = osp.basename(osp.dirname(p)).split('_')
@@ -781,7 +957,7 @@ def load_data(dir_path, img_size=None, filters={}, target='name', rem_corners=Fa
                     filter_out = True
         if filter_out:
             continue
-        
+
         # place in correct set
         if name in sub_train:
             img = Image.open(p).crop([offs[0], offs[1], s[0]-offs[0], s[1]-offs[1]])
