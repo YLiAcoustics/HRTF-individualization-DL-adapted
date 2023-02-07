@@ -288,9 +288,9 @@ def load_hutubs_yamo(dataset_path, anthropometrics_path, data_content='hrtfs', u
     #azimuths = configs['azimuth'][0]
     #elevations = configs['elevation'][0]
     #dshape = (5, 5, len(configs['freq'][0]))
-    azimuths   = sio.loadmat('./azimuth.mat')['azimuth'][0]
-    elevations = sio.loadmat('./elevation.mat')['elevation'][0]
-    frequency  = sio.loadmat('./freq_matlab.mat')['X'][0]
+    azimuths   = sio.loadmat('./HRTF data for DL/azimuth.mat')['azimuth'][0]
+    elevations = sio.loadmat('./HRTF data for DL/elevation.mat')['elevation'][0]
+    frequency  = sio.loadmat('./HRTF data for DL/freq_matlab.mat')['X'][0]
     dshape     = (5, 5, len(frequency)) # freqs('freq')
     # assemble filters
     filters = {
