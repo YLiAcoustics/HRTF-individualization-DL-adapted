@@ -1,5 +1,8 @@
+## Note: this repository is forked from the original one by Miccini et al. and adapted for special purposes. In particular, sample HRTF, position and anthropometrics data files are added to be used by the model. The files can be found at https://1drv.ms/u/s!Asa019mjsJgVk0RxlZ2Sm-Ay8fvS?e=wfYIMy
+
 # HRTF Individualization using Deep Learning
 > Material from paper _HRTF Individualization using Deep Learning_, Miccini and Spagnol, 2020
+
 
 **UPDATE: This repository if provided for reference only; please check our latest devopments! Take a look at [our new paper](https://itsadive.create.aau.dk/wp-content/uploads/2021/03/SIVE_2021.pdf) and [source code](https://github.com/miccio-dk/itsadive_hybrid_structural_model/) for a fully-functional HRTF individualization solution.**
 
