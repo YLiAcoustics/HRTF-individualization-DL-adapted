@@ -261,9 +261,10 @@ def plot_reconstructions_chen2019(encoder, decoder, data, axs, batch_size=512, x
     x = x_test[::step]
     y = y_test.iloc[::step]
     
-    # load configs
-    configs = sio.loadmat('./data/hutubs_hrtf/configs.mat')
-    freqs = configs['f'][0]
+    ## load configs
+    # configs = sio.loadmat('./data/hutubs_hrtf/configs.mat')
+    # freqs = configs['f'][0]
+    freqs  = sio.loadmat('./HRTF data for DL/freq_matlab.mat')['X'][0]
     
     # encode data
     z_mean, z_log_var = encoder.predict(x, batch_size=batch_size)
@@ -271,6 +272,8 @@ def plot_reconstructions_chen2019(encoder, decoder, data, axs, batch_size=512, x
     for i, ax in enumerate(axs.flatten()):
         # reconstruct
         z_sample = np.concatenate((z_mean[i], y[['azimuth_norm', 'elevation_norm']].iloc[i]))
+        z_sample = np.asarray(z_sample).astype('float32') 
+
         x_decoded = decoder.predict(z_sample[np.newaxis,:])
         # show in plot
         hrtf_true = (x[i] * x_train_std) + x_train_mean
