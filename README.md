@@ -1,4 +1,4 @@
-## Note: this repository is forked from the original one by Miccini et al. and adapted for special purposes. In particular, sample HRTF, position and anthropometrics data files are added to be used by the model. The files can be found at https://1drv.ms/u/s!Asa019mjsJgVk0RxlZ2Sm-Ay8fvS?e=wfYIMy
+## Note: this repository is forked from the original one by Miccini et al. and adapted for special purposes. In particular, sample HRTF, position and anthropometrics data files are added to be used by the model. The files can be found at https://1drv.ms/u/s!Asa019mjsJgVk0RxlZ2Sm-Ay8fvS?e=wfYIMy (download the folder as a whole and put it inside the folder containing the python files).
 
 # HRTF Individualization using Deep Learning
 > Material from paper _HRTF Individualization using Deep Learning_, Miccini and Spagnol, 2020
