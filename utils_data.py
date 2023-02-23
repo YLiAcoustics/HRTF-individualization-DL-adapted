@@ -342,7 +342,7 @@ def load_hutubs_yamo(dataset_path, anthropometrics_path, data_content='hrtfs', u
             mat = sio.loadmat(p)[data_content]
             # mat = sio.loadmat(p)
             
-            print(mat)
+            # print(mat)
             #filename = 'matlab-fin.mat'.format(
               #  sid, 
                # {'left': 1, 'right': 2}[ear])

@@ -108,7 +108,9 @@ def vae_stack(input_shape, position_shape, encoder, decoder):
     vae_loss = VAELossLayer(name='vae_loss')([x_true, x_pred, z_mean, z_log_var])
     # model
     model_vae = Model(inputs=[x_true, y_true], outputs=[vae_loss], name='vae')
+    model_vae.metrics_tensors = []
     model_vae.compile(optimizer='adam')
+
     # add metrics
     model_vae.metrics_tensors.append(K.mean(K.square(x_true - x_pred)))
     model_vae.metrics_names.append("loss_mse")
