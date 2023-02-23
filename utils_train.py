@@ -35,6 +35,13 @@ class TQDMCustomCallback(Callback):
 def train_model(model, x_train, y_train, x_valid, y_valid, batch_size, 
                 epochs_range, validation_freq, 
                 tqdm_bar, earlystopping_patience, checkpoint_destination, tensorboard_destination, cuda_device):
+    
+    x_train = np.asarray(x_train).astype('float32')
+    x_valid = np.asarray(x_valid).astype('float32')
+
+    y_train = np.asarray(y_train).astype('float32')
+    y_valid = np.asarray(y_valid).astype('float32') 
+
     #training callback functions
     callbacks = [
         TerminateOnNaN()
@@ -66,6 +73,9 @@ def train_model(model, x_train, y_train, x_valid, y_valid, batch_size,
     if y_train is not None:
         data_train['vae_input_position'] = y_train
         data_valid['vae_input_position'] = y_valid
+
+        print(data_train)
+        print(data_valid)
     # train the autoencoder
     os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
     trainig_obj = model.fit(data_train,
