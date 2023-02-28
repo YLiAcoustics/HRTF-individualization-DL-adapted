@@ -1,4 +1,8 @@
-## Note: this repository is forked from the original one by Miccini et al. and adapted for special purposes. In particular, sample HRTF, position and anthropometrics data files are added to be used by the model. The files can be found at https://1drv.ms/u/s!Asa019mjsJgVk0RxlZ2Sm-Ay8fvS?e=wfYIMy (download the folder as a whole and put it inside the folder containing the python files).
+# Note: this repository is forked from the original one by Miccini et al.. I am currently working on addapting the models for modeling individual HRTFs in the near-field, i.e. introducing the source distance as an input parameter. 
+Since the authors did not provide the data files, I processed SOFA HRTFs from the CIPIC database so that they are in the proper format required by the DNN models. These include the HRTF, source position and anthropometrics data. The files can be found at https://1drv.ms/u/s!Asa019mjsJgVk0RxlZ2Sm-Ay8fvS?e=wfYIMy (download the folder as a whole and put it inside the folder containing the python files).
+
+Yuqing Li, 02/2023
+--------------------------------Contents below this line are from the original repository--------------------------------
 
 # HRTF Individualization using Deep Learning
 > Material from paper _HRTF Individualization using Deep Learning_, Miccini and Spagnol, 2020
